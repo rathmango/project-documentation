@@ -1,6 +1,8 @@
 const functions = require("firebase-functions");
 const {OpenAI} = require("openai");
 const admin = require("firebase-admin");
+const fs = require("fs");
+const path = require("path");
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -10,13 +12,12 @@ const openai = new OpenAI({
 });
 
 exports.chatGPT = functions.https.onCall(async (data, context) => {
-  const {message, conversationId} = data;
+  const {message, conversationId, systemPrompt, temperature} = data;
 
   try {
     console.log(`Received message: ${message}`);
     console.log(`Conversation ID: ${conversationId}`);
 
-    // 대화 기록 가져오기
     const messagesRef = db.collection("conversations")
         .doc(conversationId)
         .collection("messages");
@@ -25,17 +26,32 @@ exports.chatGPT = functions.https.onCall(async (data, context) => {
 
     console.log(`Retrieved ${messages.length} messages from Firestore`);
 
-    // GPT API 호출
+    let fileSystemPrompt = "";
+    try {
+      const promptPath = path.join(__dirname, "prompt.txt");
+      fileSystemPrompt = fs.readFileSync(promptPath, "utf8");
+    } catch (error) {
+      console.warn("Failed to read prompt.txt file:", error);
+      // 파일을 읽지 못해도 계속 진행
+    }
+
+    const combinedSystemPrompt = systemPrompt +
+      (fileSystemPrompt ? "\n" + fileSystemPrompt : "");
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
-      messages: messages.map((msg) => ({role: msg.role, content: msg.content})),
+      messages: [
+        {role: "system", content: combinedSystemPrompt},
+        ...messages.map((msg) => ({role: msg.role, content: msg.content})),
+        {role: "user", content: message},
+      ],
+      temperature: temperature || 0.6,
     });
 
     const assistantReply = response.choices[0].message.content;
 
     console.log(`Received reply from OpenAI: ${assistantReply}`);
 
-    // 어시스턴트의 응답 추가
     await messagesRef.add({
       role: "assistant",
       content: assistantReply,
