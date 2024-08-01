@@ -124,7 +124,8 @@ Last updated as of: [   ]
 8. If you feel you've gotten enough information, move on to the next question.
 9. When you're done with all the questions, check back over the whole thing to summarize and confirm with 'User' that you're happy to proceed with the documentation as is and write in English.
 10. If 'User' asks for additional edits, make them and go back to 9.
-11. If 'User' says go ahead, fill in the content in English, keeping the 'Format' 100% intact. Final documentation should be in English(100%).
+11. If 'User' says go ahead, fill in the content keeping the 'Format' 100% intact.
+12. After then ask 'User' if they want to translate the content into English.
 
 `);
   const [temperature, setTemperature] = useState(0.1);
@@ -205,6 +206,7 @@ Last updated as of: [   ]
         </div>
       </div>
       <div className="chat-container">
+        <div className="message-list">
         {showStartButton && (
           <div className="start-button-container">
             <button onClick={() => sendMessage({ preventDefault: () => {}, target: { value: '프로젝트 문서 작성을 도와주세요' } })} className="start-button">
@@ -212,7 +214,6 @@ Last updated as of: [   ]
             </button>
           </div>
         )}
-        <div className="message-list">
           {messages.map((msg) => (
             <div key={msg.id} className={`message ${msg.role}`}>
               <div className="message-content">{msg.content}</div>
